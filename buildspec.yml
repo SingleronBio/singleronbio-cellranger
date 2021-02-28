@@ -4,6 +4,10 @@ phases:
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
+      - AWS_REGION="$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)"
+      - AWS_ACCOUNT_ID="$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .accountId)"
+      - IMAGE_TAG=$(git describe --tags)
+      - IMAGE_REPO_NAME=$(basename -s .git `git config --get remote.origin.url`)
       - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com.cn
   build:
     commands:
@@ -11,7 +15,6 @@ phases:
       - echo Downloading cellranger
       - wget -q "$(cat links.txt)" -O cellranger.tar.gz
       - echo Building the Docker image...
-      - IMAGE_TAG=$(git describe --tags)
       - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
       - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com.cn/$IMAGE_REPO_NAME:$IMAGE_TAG
   post_build:
